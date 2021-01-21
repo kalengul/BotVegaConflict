@@ -1,0 +1,161 @@
+Дата старта сеанса - 02.06.2017 Время старта сеанса - 14:25:01
+$aPos[0]=-8 $aPos[1]=-8 $aPos[2]=1936 $aPos[3]=1056
+$aClientSize[0]=1920 $aClientSize[1]=1048
+$Blue=5219778 $SkyBlue=5153985 $BlueRepair=2112577 $Red=13987438 $Yelow=14784091 $Red=13987438
+$NameWindow=KIXEYE.com - Mozilla Firefox
+X0=1 Y0=89
+X1=1911 Y1=888
+$xBtnOk=956.5 $yBtnOk=628
+$xBtnBase=1757 $yBtnBase=902
+$xBtnSpace=1876 $xBtnSpace=941
+$sheepleft=1687$sheeprightIcon=1717$SheepLeftClick=1702
+$ysheep1=313
+$ysheep2=356
+$ysheep3=399
+$ysheep4=442
+$ysheep5=485
+$ysheep6=528
+$ysheep7=571
+Позиция осановка или движение в космосе=1698y=372
+Позиция 2 движеня в космосе=1695y=372
+Позиция на базе=1703y=372
+Позиция ремонт=1703y=377
+Надпись в середине x1=946.5y1=618x2=966.5y2=638
+$xSheepInBase1=821.5 $ySheepInBase1=388
+$xSheepInBase2=956.5 $ySheepInBase2=388
+$xSheepInBase3=1091.5 $ySheepInBase3=388
+$xSheepInBase4=821.5 $ySheepInBase4=523
+$xSheepInBase5=956.5 $ySheepInBase5=523
+$xSheepInBase6=1091.5 $ySheepInBase6=523
+$xBtnLastSheep=521.5 $yBtnLastSheep=258
+$xBtnFirstSheep=521.5 $yBtnFirstSheep=328
+$xBtnDelInFleet=1256.5 $yBtnDelInFleet=898
+$xBtnRepairInBase=1286.5 $yBtnRepairInBase=429
+$xBtnFastRepairInBase=1308.5 $yBtnFastRepairInBase=702
+$xBtnFastRepairInBaseSearch=1308.5 $yBtnFastRepairInBaseSearch=477
+$xBtnExit=1432.5 $yBtnExit=189
+$xNumberBtn=1131.5 $yNumberBtn=826
+$xNumberBtn+=1144.5 $yNumberBtn+=889
+$x1/2=955.5 $y0+($y1)/2+80=613 $x1/2+90=1045.5 $y0+($y1)/2+120+$ySmeshMozilaVstupit=673
+$EnableSheep=0010001
+$SheepGoHomeFromVsec=0000000
+$BattleSheep=0010000
+$VegaSheepNomInSearch[0]=0080000
+$VegaSheepNomInSearch[1]=0000000
+$SheepGoHomeAfterBattle=0010000
+$SheepGoHomeInSektor=0000000
+$SheepGoRepair=0010000
+$SheepGoFastRepair=0010000
+$RepairNom=1234567
+$SheepEndAssistants=0000000
+$SheepConvoyNomber=0000000
+$SheepConvoyFlag=0000000
+14:25:02Sheep=1 State=1
+Sl1 14:25:02Sheep=1 State=1
+14:25:03Sheep=2 State=1
+14:25:03Sheep=3 State=1
+14:25:03Sheep=4 State=1
+14:25:03Sheep=5 State=1
+14:25:04Sheep=6 State=1
+14:25:04Sheep=7 State=8
+14:25:04Sheep=7 State=8
+
+14:25:06Sheep=3 State=1
+Atk3 Sl3 Otm VOtmFl8 AtkF 
+14:25:16Sheep=7 State=8
+
+14:25:19Sheep=3 State=3
+
+14:25:22Sheep=7 State=8
+
+14:25:24Sheep=3 State=3
+
+14:25:27Sheep=7 State=8
+
+14:25:30Sheep=3 State=3
+
+14:25:33Sheep=7 State=8
+
+14:25:35Sheep=3 State=3
+
+14:25:38Sheep=7 State=8
+
+14:25:40Sheep=3 State=3
+
+14:25:42Sheep=7 State=8
+
+14:25:44Sheep=3 State=3
+
+14:25:47Sheep=7 State=8
+
+14:25:49Sheep=3 State=0
+
+14:25:52Sheep=7 State=0
+
+14:25:55Sheep=3 State=0
+
+14:25:57Sheep=7 State=0
+
+14:26:00Sheep=3 State=0
+
+14:26:03Sheep=7 State=0
+
+14:26:05Sheep=3 State=0
+
+14:26:08Sheep=7 State=0
+
+14:26:11Sheep=3 State=0
+
+14:26:14Sheep=7 State=0
+
+14:26:16Sheep=3 State=0
+
+14:26:20Sheep=7 State=0
+
+14:26:22Sheep=3 State=0
+
+14:26:26Sheep=7 State=0
+
+14:26:28Sheep=3 State=0
+
+14:26:31Sheep=7 State=0
+
+14:26:33Sheep=3 State=0
+
+14:26:36Sheep=7 State=0
+
+14:26:39Sheep=3 State=0
+
+14:26:42Sheep=7 State=8
+
+14:26:44Sheep=3 State=5
+Sl3 Voz3 
+14:26:50Sheep=7 State=8
+
+14:26:52Sheep=3 State=6
+
+14:26:55Sheep=7 State=8
+
+14:26:57Sheep=3 State=6
+
+14:27:00Sheep=7 State=8
+
+14:27:02Sheep=3 State=6
+
+14:27:05Sheep=7 State=8
+
+14:27:08Sheep=3 State=6
+
+14:27:11Sheep=7 State=8
+
+14:27:13Sheep=3 State=6
+
+14:27:16Sheep=7 State=8
+
+14:27:19Sheep=3 State=6
+
+14:27:22Sheep=7 State=8
+
+14:27:25Sheep=3 State=7
+NR 7 NFR 0 FR3 BtSpace  NomFlFR 0 14:27:26Sheep=7 State=8
+Sl7 DRep7 Sl3 Bt1  SE BtSheep 6 DelSheep 0 SE BtSheep 5 DelSheep 0 SE BtSheep 4 DelSheep 0 SE BtSheep 3 DelSheep 0 SE BtSheep 2 DelSheep 0 SetNFR 3 FFR 1  Wh  R BtRem  Wh  NotR  R  NextSheep 2  BtSheep 2  BtSheep 2  BtSheep 2  BtSheep 2  BtSheep 2  BtSheep 2  BtSheep 2  BtSheep 2  BtSheep 2 
