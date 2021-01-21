@@ -1,5 +1,6 @@
 #include <MsgBoxConstants.au3>
 #include <Date.au3>
+#include <Misc.au3>
 ;~ Переменная вывода протокола
 Global $GoProtocol=1
 $hFile = FileOpen("SessionStatistics.txt", 1)
@@ -9,12 +10,15 @@ $FSettingTime=FileOpen("SettingTimeInAssistans.txt", 0)
 $FSystemSetting=FileOpen("SysSettingAssistans.txt", 0)
 if $GoProtocol=1 then
 $h2File = FileOpen("ProtocolSession.txt", 2)
+$FileAction = FileOpen("Action.txt", 2)
 FileWrite($h2File,"Дата старта сеанса - "&_NowDate()&" Время старта сеанса - "& _NowTime()&  @CRLF)
 EndIf
 
 ;~ Переменная заголовка рабочего окна (для Steam - "VEGA Conflict" для Mozila - "KIXEYE.com - Mozilla Firefox")
-Global $NameWindow=FileReadLine($FSettingFleet,96)
+Global $NameWindow=FileReadLine($FSettingFleet,152)
+
 ;~ Размеры рабочей области
+;~ WinMove($NameWindow, "", 0, 0, 1350, 700)
 Opt("CaretCoordMode", 2)
 Global $aClientSize = WinGetClientSize($NameWindow)
 Global $aPos=WinGetPos($NameWindow)
@@ -36,6 +40,7 @@ Global $RedBaseAttack=0xFE5959
 Global $Yelow=0xE1965B
 Global $YelowSpace=0xD48C55
 Global $YelowRepair=5783327
+Global $YelowRepair2=0x7F5B2C
 Global $Blue=0x4FA5C2
 Global $BlueRepair=2112577
 Global $BlueSheepSelectRepair=0x121F22
@@ -215,7 +220,7 @@ $xNumberBtn=$x0+$x1/2+$xNumberBtn
 $yNumberBtn=$y0+$y1+$yNumberBtn
 
 ;~ Переменная времен вылета Vsec
-Global $VsecTime [9] =[0,3,6,9,12,15,18,21,24]
+Global $VsecTime [8] =[2,5,8,11,14,17,20,23]
 ;~ Время возврата флотов перед VSec в минутах
 Global $ConstTimeVozvratMin =50
 
@@ -234,6 +239,8 @@ Global $StateKolRequestAttackSheep [7] = [0,0,0,0,0,0,0]
 Global $StateSheepDestroy [7] = [0,0,0,0,0,0,0]
 ;~ Переменная флагов того что флот в бою
 Global $SheepInFight [7] = [0,0,0,0,0,0,0]
+;~ Переменная номератекущей метки при перемещении
+Global $SheepCurrentMet [7] = [0,0,0,0,0,0,0]
 ;~ Переменная состояния сопровождения флотов
 Global $SheepConvoyState [7] = [0,0,0,0,0,0,0]
 ;~ Флаг необходимости ожидания сопровождающего флота
@@ -261,15 +268,21 @@ Global $FirstStart=1
 
 ;~ НАСТРОЙКИ программы
 ;~ ИСпользуемые в боте флоты
-Global $EnableSheep [7] =[1,1,0,0,1,1,1]
+Global $EnableSheep [7] =[0,0,0,0,0,0,0]
 ;~ Какие флоты отзывать в случае вылета Всека
 Global $SheepGoHomeFromVsec [7] = [0,0,0,0,1,0,0]
 ;~ Переменная возможности флота воевать
 Global $BattleSheep [7]= [0,0,0,0,1,1,1]
 ;~ Какие отметки из списка бить флотам
-Global $VegaSheepNomInSearch [5][7] = [[0,0,0,0,1,3,4],[0,0,0,0,5,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0]]
+Global $VegaSheepNomInSearch [10][7] = [[0,0,0,0,1,3,4],[0,0,0,0,5,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0]]
+;~ Атаковать вегу или летать по меткам
+Global $VegaSheepOrVegaMet [7] = [0,0,0,0,0,0,0]
+;~ Удалить метку после перелета
+Global $VegaDelMethAfter [7] = [0,0,0,0,0,0,0]
 ;~ Какие флоты возвращать после боя
 Global $SheepGoHomeAfterBattle [7] = [0,0,0,0,0,0,0]
+;~ Какие флоты возвращать после остановки в секторе
+Global $SheepGoHomeInSektor [7] = [0,0,0,0,0,0,0]
 ;~ Номера флотов, которые сопровождать
 Global $SheepConvoyNomber [7] =[0,0,0,0,0,0,0]
 ;~ Какие флоты возращать на ремонт в случае повреждения
@@ -284,6 +297,8 @@ Global $SheepEndAssistants [7] =[0,0,0,0,0,0,0]
 Global $GoAttackAtBaseIvent=0
 ;~ Время (час) выключения бота (больше 24 - выключение не происходит)
 Global $TimeStopAssistent=25
+;~ Время (час) включения бота (больше 24 - включение не происходит)
+Global $TimeStartAssistent=25
 
 ;~ Иcпользуемые в боте флоты
 $i=0
@@ -300,7 +315,7 @@ WEnd
 ;~ Какие отметки из списка бить флотам
 $j=0
 $k=0
-While $j<5
+While $j<10
    $i=0
    While $i<7
 	  $VegaSheepNomInSearch [$j][$i]=FileReadLine($FSettingFleet,15+$k)
@@ -312,46 +327,70 @@ WEnd
 ;~ Какие флоты возвращать после боя
 $i=0
 While $i<7
-   $SheepGoHomeAfterBattle[$i]=FileReadLine($FSettingFleet,50+$i)
+   $SheepGoHomeAfterBattle[$i]=FileReadLine($FSettingFleet,85+$i)
    $i=$i+1
 WEnd
 ;~ Какие флоты возращать на ремонт в случае повреждения
 $i=0
 While $i<7
-   $SheepGoRepair[$i]=FileReadLine($FSettingFleet,57+$i)
+   $SheepGoRepair[$i]=FileReadLine($FSettingFleet,92+$i)
    $i=$i+1
 WEnd
 ;~ Какие флоты отзывать в случае вылета Всека
 $i=0
 While $i<7
-   $SheepGoHomeFromVsec[$i]=FileReadLine($FSettingFleet,64+$i)
+   $SheepGoHomeFromVsec[$i]=FileReadLine($FSettingFleet,99+$i)
    $i=$i+1
 WEnd
 ;~ Какие флоты быстро ремонтировать
 $i=0
 While $i<7
-   $SheepGoFastRepair[$i]=FileReadLine($FSettingFleet,71+$i)
+   $SheepGoFastRepair[$i]=FileReadLine($FSettingFleet,106+$i)
    $i=$i+1
 WEnd
 ;~ Номера флотов, которые сопровождать
 $i=0
 While $i<7
-   $SheepConvoyNomber[$i]=FileReadLine($FSettingFleet,78+$i)
+   $SheepConvoyNomber[$i]=FileReadLine($FSettingFleet,113+$i)
    $i=$i+1
 WEnd
 ;~ Порядок ремонта. В массиве номера флотов
 $i=0
 While $i<7
-   $RepairNom[$i]=FileReadLine($FSettingFleet,85+$i)
+   $RepairNom[$i]=FileReadLine($FSettingFleet,120+$i)
    $i=$i+1
 WEnd
 ;~ Флаг запуска атаки на базу во время ивента
-Global $GoAttackAtBaseIvent=FileReadLine($FSettingFleet,92)
+Global $GoAttackAtBaseIvent=FileReadLine($FSettingFleet,127)
 ;~ Время (час) выключения бота (больше 24 - выключение не происходит)
-Global $TimeStopAssistent=FileReadLine($FSettingFleet,93)
-Global $TimeStopAssistentMin=FileReadLine($FSettingFleet,94)
+Global $TimeStopAssistent=FileReadLine($FSettingFleet,128)
+Global $TimeStopAssistentMin=FileReadLine($FSettingFleet,129)
 ;~ Возврат флотов по завершению работы
-Global $AllFleetGoHomeExit=FileReadLine($FSettingFleet,95)
+Global $AllFleetGoHomeExit=FileReadLine($FSettingFleet,130)
+
+
+;~ Какие флоты отзывать в случае остановки в секторе
+$i=0
+While $i<7
+   $SheepGoHomeInSektor[$i]=FileReadLine($FSettingFleet,131+$i)
+   $i=$i+1
+WEnd
+;~ Атаковать вегу или летать по меткам
+$i=0
+While $i<7
+   $VegaSheepOrVegaMet[$i]=FileReadLine($FSettingFleet,138+$i)
+   $i=$i+1
+WEnd
+;~ Удалить метку после перелета
+$i=0
+While $i<7
+   $VegaDelMethAfter[$i]=FileReadLine($FSettingFleet,145+$i)
+   $i=$i+1
+WEnd
+
+;~ Время (час) включения бота (больше 24 - включение не происходит)
+Global $TimeStartAssistent=FileReadLine($FSettingFleet,153)
+Global $TimeStartAssistentMin=FileReadLine($FSettingFleet,154)
 
 FileDelete("SettingFletInAssistans.txt")
 
@@ -422,7 +461,7 @@ FileWrite($h2File, "$xBtnFastRepairInBase="& $x0+$x1/2+$xBtnFastRepairInBase & "
 FileWrite($h2File, "$xBtnFastRepairInBaseSearch="& $x0+$x1/2+$xBtnFastRepairInBaseSearch & " $yBtnFastRepairInBaseSearch="& $y0+$y1/2+$yBtnFastRepairInBaseSearch-20+$yFastRepair &  @CRLF)
 FileWrite($h2File, "$xBtnExit="& $x0+$x1/2+$xBtnExit & " $yBtnExit="& $y0+$y1/2+$yBtnExit-10 &  @CRLF)
 FileWrite($h2File, "$xNumberBtn="& $xNumberBtn & " $yNumberBtn="& $yNumberBtn &  @CRLF)
-FileWrite($h2File, "$x1/2="& $x1/2 & " $y0+($y1)/2+80="& $y0+($y1)/2+80 & " $x1/2+90="& $x1/2+90 & " $y0+($y1)/2+120+$ySmeshMozilaVstupit="& $y0+($y1)/2+120+$ySmeshMozilaVstupit &  @CRLF)
+FileWrite($h2File, "$xNumberBtn+="& $xNumberBtn+13 & " $yNumberBtn+="& $yNumberBtn+63 &  @CRLF)
 FileWrite($h2File, "$x1/2="& $x1/2 & " $y0+($y1)/2+80="& $y0+($y1)/2+80 & " $x1/2+90="& $x1/2+90 & " $y0+($y1)/2+120+$ySmeshMozilaVstupit="& $y0+($y1)/2+120+$ySmeshMozilaVstupit &  @CRLF)
 EndIf
 
@@ -430,9 +469,15 @@ if $GoProtocol=1 then
 FileWrite($h2File, "$EnableSheep="&$EnableSheep[0] & $EnableSheep[1]& $EnableSheep[2]&$EnableSheep[3]&$EnableSheep[4]&$EnableSheep[5]&$EnableSheep[6]&  @CRLF)
 FileWrite($h2File, "$SheepGoHomeFromVsec="&$SheepGoHomeFromVsec[0] & $SheepGoHomeFromVsec[1]& $SheepGoHomeFromVsec[2]&$SheepGoHomeFromVsec[3]&$SheepGoHomeFromVsec[4]&$SheepGoHomeFromVsec[5]&$SheepGoHomeFromVsec[6]&  @CRLF)
 FileWrite($h2File, "$BattleSheep="&$BattleSheep[0] & $BattleSheep[1]& $BattleSheep[2]&$BattleSheep[3]&$BattleSheep[4]&$BattleSheep[5]&$BattleSheep[6]&  @CRLF)
+FileWrite($h2File, "$VegaSheepOrVegaMet="&$VegaSheepOrVegaMet[0] & $VegaSheepOrVegaMet[1]& $VegaSheepOrVegaMet[2]&$VegaSheepOrVegaMet[3]&$VegaSheepOrVegaMet[4]&$VegaSheepOrVegaMet[5]&$VegaSheepOrVegaMet[6]&  @CRLF)
+FileWrite($h2File, "$VegaDelMethAfter="&$VegaDelMethAfter[0] & $VegaDelMethAfter[1]& $VegaDelMethAfter[2]&$VegaDelMethAfter[3]&$VegaDelMethAfter[4]&$VegaDelMethAfter[5]&$VegaDelMethAfter[6]&  @CRLF)
 FileWrite($h2File, "$VegaSheepNomInSearch[0]="&$VegaSheepNomInSearch[0][0] & $VegaSheepNomInSearch[0][1]& $VegaSheepNomInSearch[0][2]&$VegaSheepNomInSearch[0][3]&$VegaSheepNomInSearch[0][4]&$VegaSheepNomInSearch[0][5]&$VegaSheepNomInSearch[0][6]&  @CRLF)
 FileWrite($h2File, "$VegaSheepNomInSearch[1]="&$VegaSheepNomInSearch[1][0] & $VegaSheepNomInSearch[1][1]& $VegaSheepNomInSearch[1][2]&$VegaSheepNomInSearch[1][3]&$VegaSheepNomInSearch[1][4]&$VegaSheepNomInSearch[1][5]&$VegaSheepNomInSearch[1][6]&  @CRLF)
+FileWrite($h2File, "$VegaSheepNomInSearch[2]="&$VegaSheepNomInSearch[2][0] & $VegaSheepNomInSearch[2][1]& $VegaSheepNomInSearch[2][2]&$VegaSheepNomInSearch[2][3]&$VegaSheepNomInSearch[2][4]&$VegaSheepNomInSearch[2][5]&$VegaSheepNomInSearch[2][6]&  @CRLF)
+FileWrite($h2File, "$VegaSheepNomInSearch[3]="&$VegaSheepNomInSearch[3][0] & $VegaSheepNomInSearch[3][1]& $VegaSheepNomInSearch[3][2]&$VegaSheepNomInSearch[3][3]&$VegaSheepNomInSearch[3][4]&$VegaSheepNomInSearch[3][5]&$VegaSheepNomInSearch[3][6]&  @CRLF)
+FileWrite($h2File, "$VegaSheepNomInSearch[4]="&$VegaSheepNomInSearch[4][0] & $VegaSheepNomInSearch[4][1]& $VegaSheepNomInSearch[4][2]&$VegaSheepNomInSearch[4][3]&$VegaSheepNomInSearch[4][4]&$VegaSheepNomInSearch[4][5]&$VegaSheepNomInSearch[4][6]&  @CRLF)
 FileWrite($h2File, "$SheepGoHomeAfterBattle="&$SheepGoHomeAfterBattle[0] & $SheepGoHomeAfterBattle[1]& $SheepGoHomeAfterBattle[2]&$SheepGoHomeAfterBattle[3]&$SheepGoHomeAfterBattle[4]&$SheepGoHomeAfterBattle[5]&$SheepGoHomeAfterBattle[6]&  @CRLF)
+FileWrite($h2File, "$SheepGoHomeInSektor="&$SheepGoHomeInSektor[0] & $SheepGoHomeInSektor[1]& $SheepGoHomeInSektor[2]&$SheepGoHomeInSektor[3]&$SheepGoHomeInSektor[4]&$SheepGoHomeInSektor[5]&$SheepGoHomeInSektor[6]&  @CRLF)
 FileWrite($h2File, "$SheepGoRepair="&$SheepGoRepair[0] & $SheepGoRepair[1]& $SheepGoRepair[2]&$SheepGoRepair[3]&$SheepGoRepair[4]&$SheepGoRepair[5]&$SheepGoRepair[6]&  @CRLF)
 FileWrite($h2File, "$SheepGoFastRepair="&$SheepGoFastRepair[0] & $SheepGoFastRepair[1]& $SheepGoFastRepair[2]&$SheepGoFastRepair[3]&$SheepGoFastRepair[4]&$SheepGoFastRepair[5]&$SheepGoFastRepair[6]&  @CRLF)
 FileWrite($h2File, "$RepairNom="&$RepairNom[0] & $RepairNom[1]& $RepairNom[2]&$RepairNom[3]&$RepairNom[4]&$RepairNom[5]&$RepairNom[6]&  @CRLF)
@@ -442,6 +487,25 @@ FileWrite($h2File, "$SheepConvoyFlag="&$SheepConvoyFlag[0] & $SheepConvoyFlag[1]
 
 EndIf
 
+Func _StopClick()
+While not (WinActive($NameWindow))
+   Sleep (500)
+WEnd
+EndFunc
+
+Func _GoSpace()
+ $coord = PixelSearch($x0+$x1+$xBtnSpace-5,$y0+$y1+$yBtnSpace-5,$x0+$x1+$xBtnSpace+5,$y0+$y1+$yBtnSpace+5, $YelowSpace,10)
+	  If @error Then
+;~ 		 Если ошибка то возращаем состояние в космос
+		 _DelMessageByFightAnotherFleet ()
+		 $coord = PixelSearch($x0+$x1/2+$xBtnExit-5,$y0+$y1/2+$yBtnExit-10,$x0+$x1/2+$xBtnExit+5,$y0+$y1/2+$yBtnExit-20, $BlueExit,10)
+		 IF not @error Then
+			_StopClick()
+			MouseClick("left",$x0+$x1/2+$xBtnExit,$y0+$y1/2+$yBtnExit-10,1,1)
+			Sleep($TimeSmallConst+random($TimeSmallRnd))
+			EndIf
+	  EndIf
+   EndFunc
 
 Func _DelMessageByFightAnotherFleet ()
    $coord = PixelSearch($x1/2+80,$y0+($y1)/2+115,$x1/2+90,$y0+($y1)/2+125+$ySmeshMozilaVstupit, $White,$WhiteRazn)
@@ -450,6 +514,7 @@ While not @error
 if $GoProtocol=1 then
 FileWrite($h2File, "Уб ")
 EndIf
+	  _StopClick()
 	  MouseClick("left",$x1/2+100+random(20),$y0+($y1)/2+100,1,1)
 	  Sleep($TimeSmallConst+random($TimeSmallRnd))
 	  $coord = PixelSearch($x1/2+80,$y0+($y1)/2+115,$x1/2+90,$y0+($y1)/2+125+$ySmeshMozilaVstupit, $White,$WhiteRazn)
@@ -467,8 +532,10 @@ EndFunc
 Func _SelectSheep (ByRef $i)
    ;~ 	Выбрать Флот
 ;~    If ($i<>$SelectSheep) then
+_GoSpace()
    $dy=0
    _GoDy ($SelectSheep,$i,$dy)
+   _StopClick()
    MouseClick("left",$sheeprightIcon-5-random(20),$ysheep1+($i-1)*$dysheep+$dy+$dysheep/2+random(10),1,1)
 if $GoProtocol=1 then
 FileWrite($h2File, "Sl"&$i&" ")
@@ -479,6 +546,134 @@ EndIf
    $SelectSheep=$i
    Sleep($TimeSmallSmallConst+random($TimeSmallSmallRnd))
 ;~    EndIf
+EndFunc
+
+Func _GoFlyFleetMet($i)
+if $GoProtocol=1 then
+FileWrite($h2File, "MTAtk"&$i&" ")
+EndIf
+$GoAttack=0
+$CurrentMet=$SheepCurrentMet[$i-1]
+IF ($SheepCurrentMet[$i-1]<9) and ($VegaSheepNomInSearch[$CurrentMet][$i-1]<>0) and ($GoAttack=0) then
+   _SelectSheep ($i)
+
+;~ $StateKolRequestAttackSheep[$i-1]=$StateKolRequestAttackSheep[$i-1]+1
+;~ Выбрать флот веги из списка возможных
+;~ Нажать кнопку с отметками
+if $GoProtocol=1 then
+FileWrite($h2File, "Otm "&$CurrentMet&" ")
+EndIf
+   _StopClick()
+   MouseClick("left",$x1+$XOtmBtn,$y0+$YOtmBtn,1,1)
+   Sleep($TimeSmallSmallConst+random($TimeSmallSmallRnd))
+
+;~ Выбрать нужную метку
+if $GoProtocol=1 then
+FileWrite($h2File, "Mt"&$VegaSheepNomInSearch[$CurrentMet][$i-1]&" ")
+EndIf
+   _StopClick()
+   MouseClick("left",$x1/2-400+150+random(50),$y0+($y1)/2+(-5+$VegaSheepNomInSearch[$CurrentMet][$i-1])*$yOtmetki,1,1)
+;~ Имитируем задержку пользователя
+   Sleep($TimeMediumConst+random($TimeMediumRnd))
+
+;~    Нажать на метку
+;~ $coord = PixelSearch($xNumberBtn,$yNumberBtn,$xNumberBtn+5,$yNumberBtn+63, $WhiteBtn,10)
+;~ $KolWhileGo=0
+;~ While (@error) and ($KolWhileGo<=10)
+;~    $KolWhileGo=$KolWhileGo+1
+if $GoProtocol=1 then
+FileWrite($h2File, "Cl")
+EndIf
+   _StopClick()
+   MouseClick("left",$x0+$x1/2,$y0+($y1)/2+17,1,1)
+   Sleep($TimeMediumConst+random($TimeMediumRnd))
+if $GoProtocol=1 then
+FileWrite($h2File, "Cl")
+EndIf
+   _StopClick()
+   MouseClick("left",$x0+$x1/2,$y0+($y1)/2+17,1,1)
+   Sleep($TimeMediumConst+random($TimeMediumRnd))
+;~    $coord = PixelSearch($xNumberBtn,$yNumberBtn,$xNumberBtn+5,$yNumberBtn+63, $WhiteBtn,10)
+;~ WEnd
+
+;~ Если в середине появилась надпись
+   $coord = PixelSearch($xBtnOk-10,$yBtnOk-10,$xBtnOk+10,$yBtnOk+10, $White,10)
+   If not @error Then
+;~ 	   Нажать «ОК»
+	  _DelMessageByFightAnotherFleet ()
+	  $GoAttack=0
+if $GoProtocol=1 then
+FileWrite($h2File, "BtnOk ")
+EndIf
+	  _StopClick()
+	  MouseClick("left",$xBtnOk+random(20),$yBtnOk+random(20),1,1)
+	  Sleep($TimeSmallSmallConst+random($TimeSmallSmallRnd))
+   Else
+;~ 	  Нажать «Переместиться» (1 кнопка)
+	  $GoAttack=1
+if $GoProtocol=1 then
+FileWrite($h2File, "GoMt ")
+EndIf
+;~ 	  $coord = PixelSearch($xNumberBtn,$yNumberBtn,$xNumberBtn+5,$yNumberBtn+8, $WhiteBtn,10)
+;~ 	  If @error Then
+;~ 		 _SelectSheep($i)
+;~ 		 EndIf
+	  _StopClick()
+	  MouseClick("left",$xBtn1+1*$dxBtn-$dxBtn/2+Random(20),$yBtn,1,1)
+	  Sleep($TimeSmallSmallConst+random($TimeSmallSmallRnd))
+;~ 	  Увеличить количество атакованных флотов
+;~ 	  $StateKolSelectAttackSheep[$i-1]=$StateKolSelectAttackSheep[$i-1]+1
+   EndIf
+
+;~ Имитируем задержку пользователя
+   Sleep($TimeLargeConst+random($TimeLargeRnd))
+;~ Проверка насчет сообщения об атакованном флоте
+;~ FileWrite($hFile, "Точка x="&$x1/2+90&" y="&$y0+($y1)/2+120+$ySmeshMozilaVstupit&  @CRLF)
+
+   $coord = PixelSearch($x1/2,$y0+($y1)/2+80,$x1/2+90,$y0+($y1)/2+120+$ySmeshMozilaVstupit, $White,$WhiteRazn)
+   If not @error Then
+;~ 	   Нажать "Вступить"
+if $GoProtocol=1 then
+FileWrite($h2File, "Vst ")
+EndIf
+	  _StopClick()
+	  MouseClick("left",$x1/2-45+random(20),$y0+($y1)/2+100,1,1)
+	  Sleep($TimeMediumConst+random($TimeMediumRnd))
+   EndIf
+   $MinMouseClick=@MIN
+
+;~    Удаление метки
+If $VegaDelMethAfter[$i-1]<>0 Then
+;~ Нажать кнопку с отметками
+if $GoProtocol=1 then
+FileWrite($h2File, "Otm "&$CurrentMet&" ")
+EndIf
+   _StopClick()
+   _DelMessageByFightAnotherFleet ()
+   MouseClick("left",$x1+$XOtmBtn,$y0+$YOtmBtn,1,1)
+   Sleep($TimeSmallSmallConst+random($TimeSmallSmallRnd))
+;~ Выбрать нужную метку
+if $GoProtocol=1 then
+FileWrite($h2File, "DelMt"&$VegaSheepNomInSearch[$CurrentMet][$i-1]&" ")
+EndIf
+   _StopClick()
+   _DelMessageByFightAnotherFleet ()
+   MouseClick("left",$x0+$x1/2+$xBtnExit-30,$y0+($y1)/2+(-5+$VegaSheepNomInSearch[$CurrentMet][$i-1])*$yOtmetki,1,1)
+   Sleep($TimeSmallSmallConst+random($TimeSmallSmallRnd))
+if $GoProtocol=1 then
+   FileWrite($h2File, " BtnEx ")
+EndIf
+   _StopClick()
+   _DelMessageByFightAnotherFleet ()
+   MouseClick("left",$x0+$x1/2+$xBtnExit,$y0+$y1/2+$yBtnExit-10,1,1)
+   Sleep($TimeSmallConst+random($TimeSmallRnd))
+   EndIf
+
+EndIf
+$SheepCurrentMet[$i-1]=$CurrentMet+1
+IF ($SheepCurrentMet[$i-1]=9) or ($VegaSheepNomInSearch[$SheepCurrentMet[$i-1]][$i-1]=0) Then
+   $SheepCurrentMet[$i-1]=0
+   EndIf
 EndFunc
 
 Func _GoBattleFleet($i)
@@ -495,6 +690,7 @@ while ($Nom<4) and ($VegaSheepNomInSearch[$Nom][$i-1]<>0) and ($GoAttack=0)
 if $GoProtocol=1 then
 FileWrite($h2File, "Otm ")
 EndIf
+   _StopClick()
    MouseClick("left",$x1+$XOtmBtn,$y0+$YOtmBtn,1,1)
    Sleep($TimeSmallSmallConst+random($TimeSmallSmallRnd))
 
@@ -502,6 +698,7 @@ EndIf
 if $GoProtocol=1 then
 FileWrite($h2File, "VOtm")
 EndIf
+   _StopClick()
    MouseClick("left",$x1/2+$XOtmecennieBtn+random(50),$y0+($y1)/2-5*$yOtmetki+$YOtmecennieBtn,1,1)
    Sleep($TimeSmallSmallConst+random($TimeSmallSmallRnd))
 
@@ -509,6 +706,7 @@ EndIf
 if $GoProtocol=1 then
 FileWrite($h2File, "Fl"&$VegaSheepNomInSearch[$Nom][$i-1]&" ")
 EndIf
+   _StopClick()
    MouseClick("left",$x1/2-400+150+random(50),$y0+($y1)/2+(-5+$VegaSheepNomInSearch[$Nom][$i-1])*$yOtmetki,1,1)
 
 
@@ -524,6 +722,7 @@ EndIf
 if $GoProtocol=1 then
 FileWrite($h2File, "BtnOk ")
 EndIf
+	  _StopClick()
 	  MouseClick("left",$xBtnOk+random(20),$yBtnOk+random(20),1,1)
 	  Sleep($TimeSmallSmallConst+random($TimeSmallSmallRnd))
    Else
@@ -536,6 +735,7 @@ EndIf
 ;~ 	  If @error Then
 ;~ 		 _SelectSheep($i)
 ;~ 		 EndIf
+	  _StopClick()
 	  MouseClick("left",$xBtn1+1*$dxBtn-$dxBtn/2+Random(20),$yBtn,1,1)
 	  Sleep($TimeSmallSmallConst+random($TimeSmallSmallRnd))
 ;~ 	  Увеличить количество атакованных флотов
@@ -553,6 +753,7 @@ EndIf
 if $GoProtocol=1 then
 FileWrite($h2File, "Vst ")
 EndIf
+	  _StopClick()
 	  MouseClick("left",$x1/2-45+random(20),$y0+($y1)/2+100,1,1)
 	  Sleep($TimeMediumConst+random($TimeMediumRnd))
    EndIf
@@ -564,6 +765,7 @@ EndIf
 if $GoProtocol=1 then
 FileWrite($h2File, "BtnOk ")
 EndIf
+	  _StopClick()
 	  MouseClick("left",$xBtnOk+random(20),$yBtnOk+random(20),1,1)
 	  Sleep($TimeSmallSmallConst+random($TimeSmallSmallRnd))
    EndIf
@@ -581,7 +783,8 @@ EndIf
    $coord = PixelSearch($xNumberBtn,$yNumberBtn,$xNumberBtn+5,$yNumberBtn+63, $WhiteBtn,10)
    If @error Then
 	  _SelectSheep($i)
-	  EndIf
+   EndIf
+   _StopClick()
    MouseClick("left",$xBtn1+3*$dxBtn-$dxBtn/2+random(20),$yBtn,1,1)
    $MinMouseClick=@MIN
    Sleep($TimeMediumConst+random($TimeMediumRnd))
@@ -748,7 +951,7 @@ Func _RepairFleet ()
 ;~ 	  Если первым нашли флот в ремонте, то завершить поиск
 	  if ($SheepRem=$RepairNom[$j-1]) Then
 		 $EndWhileRepair=1
-	  Elseif ($SheepRem<>$RepairNom[$j-1]) and ($EndWhileRepair=0) and ($StateSheep[$RepairNom[$j-1]-1]=7) Then
+	  Elseif ($SheepRem<>$RepairNom[$j-1]) and ($EndWhileRepair=0) and ($EnableSheep[$RepairNom[$j-1]-1]=1) and ($StateSheep[$RepairNom[$j-1]-1]=7) Then
 ;~ 	     Если первым найден красный флот на базе, то
 ;~ 		 Проверяем наличие ремонтируемого флота
 		 $EndWhileRepair=1
@@ -764,10 +967,11 @@ Func _RepairFleet ()
 			   if $GoProtocol=1 then
 			   FileWrite($h2File, "DRep"&$SheepRem&" ")
 			   EndIf
-			   $coord = PixelSearch($xNumberBtn,$yNumberBtn,$xNumberBtn+5,$yNumberBtn+63, $WhiteBtn,10)
+			   $coord = PixelSearch($xNumberBtn,$yNumberBtn-13,$xNumberBtn+13,$yNumberBtn+63, $WhiteBtn,10)
 			   If @error Then
 				  _SelectSheep($SheepRem)
-				  EndIf
+			   EndIf
+			   _StopClick()
 			   MouseClick("left",$xBtn1+4*$dxBtn-$dxBtn/2+random(20),$yBtn,1,1)
 			   Sleep($TimeMediumConst+random($TimeMediumRnd))
 			   EndIf
@@ -776,10 +980,11 @@ Func _RepairFleet ()
 		 if $GoProtocol=1 then
 		 FileWrite($h2File, "Rep"&$RepairNom[$j-1]&" ")
 		 EndIf
-		 $coord = PixelSearch($xNumberBtn,$yNumberBtn,$xNumberBtn+5,$yNumberBtn+63, $WhiteBtn,10)
+		 $coord = PixelSearch($xNumberBtn,$yNumberBtn-13,$xNumberBtn+13,$yNumberBtn+63, $WhiteBtn,10)
 		 If @error Then
 			_SelectSheep($RepairNom[$j-1])
-			EndIf
+		 EndIf
+		 _StopClick()
 		 MouseClick("left",$xBtn1+4*$dxBtn-$dxBtn/2+random(20),$yBtn,1,1)
 		 $MinMouseClick=@MIN
 		 Sleep($TimeMediumConst+random($TimeMediumRnd))
@@ -791,164 +996,8 @@ Func _RepairFleet ()
 	  WEnd
 EndFunc
 
-Func _FastRepairFleet($i)
-;~    Нажимаем на космос
-if $GoProtocol=1 then
-FileWrite($h2File, "FR"&$i&" ")
-EndIf
-   MouseClick("left",$x0+$x1+$xBtnSpace,$y0+$y1+$yBtnSpace,1,1)
-   Sleep($TimeSmallConst+random($TimeSmallRnd))
-if $GoProtocol=1 then
-FileWrite($h2File, "BtSpace ")
-EndIf
-;~ Если быстрый ремонт еще не запускался.
-if $GoProtocol=1 then
-FileWrite($h2File, " NomFlFR "&$NomFleetInFastRepir&" ")
-EndIf
-
-
-;~ Отключаем ремонт
-   if ($SheepRem<>0) and ($NomFleetInFastRepir=0) Then
-;~ 	Проверяем состояние флота
-	  _GetSostSheep($SelectSheep,$SheepRem)
-;~ 	Если флот ремонтируется
-	  IF $StateSheep[$SheepRem-1]=8 then
-;~ 		 Отключаем ремонт
-		 _SelectSheep ($SheepRem)
-if $GoProtocol=1 then
-FileWrite($h2File, "DRep"&$SheepRem&" ")
-EndIf
-		 $coord = PixelSearch($xNumberBtn,$yNumberBtn,$xNumberBtn+5,$yNumberBtn+63, $WhiteBtn,10)
-		 $KolWhileGo=0
-		 While (@error) and ($KolWhileGo<=10)
-			$KolWhileGo=$KolWhileGo+1
-			_SelectSheep($SheepRem)
-;~ 			Sleep($TimeSmallConst+random($TimeSmallRnd))
-			$coord = PixelSearch($xNumberBtn,$yNumberBtn,$xNumberBtn+5,$yNumberBtn+63, $WhiteBtn,10)
-			WEnd
-		 MouseClick("left",$xBtn1+4*$dxBtn-$dxBtn/2+random(20),$yBtn,1,1)
-		 Sleep($TimeMediumConst+random($TimeMediumRnd))
-		 EndIf
-	  EndIf
-;~ Выбираем корабль
-_SelectSheep ($i)
-;~ Заходим в порт (1 кнопка)
-if $GoProtocol=1 then
-FileWrite($h2File, "Bt1 ")
-EndIf
-$coord = PixelSearch($xNumberBtn,$yNumberBtn,$xNumberBtn+5,$yNumberBtn+63, $WhiteBtn,10)
-$KolWhileGo=0
-While (@error) and ($KolWhileGo<=10)
-   $KolWhileGo=$KolWhileGo+1
-   _SelectSheep($i)
-;~    Sleep($TimeSmallConst+random($TimeSmallRnd))
-   $coord = PixelSearch($xNumberBtn,$yNumberBtn,$xNumberBtn+5,$yNumberBtn+63, $WhiteBtn,10)
-   WEnd
-MouseClick("left",$xBtn1+1*$dxBtn-$dxBtn/2+random(20),$yBtn,1,1)
-Sleep($TimeSmallConst+random($TimeSmallRnd))
-_DelMessageByFightAnotherFleet ()
-;~ Убираем корабли
-IF $NomFleetInFastRepir=0 then
-$NotDelSheepInFastRepair=False
-$NomSheepInFastRepair=6;
-While ($NomSheepInFastRepair>=2) and (not $NotDelSheepInFastRepair)
-;~ Проверка на наличие корабля
-   $coord = PixelSearch($xSheepInBase[$NomSheepInFastRepair-1]+$xSheepInBaseSmesh,$ySheepInBase[$NomSheepInFastRepair-1]+$ySheepInBaseSmesh,$xSheepInBase[$NomSheepInFastRepair-1]+$xSheepInBaseSmesh,$ySheepInBase[$NomSheepInFastRepair-1]+$ySheepInBaseSmesh, $Black,8)
-   If  @error Then
-if $GoProtocol=1 then
-FileWrite($h2File, " SE ")
-EndIf
-;~    Проверка на наличие кнопки ремонт
-	  $coord = PixelSearch($x0+$x1/2+$xBtnFastRepairInBaseSearch-5,$y0+$y1/2+$yBtnFastRepairInBaseSearch-20-5,$x0+$x1/2+$xBtnFastRepairInBaseSearch+5,$y0+$y1/2+$yBtnFastRepairInBaseSearch-20+5, $YelowRepair,10)
-	  If  not @error Then
-;~ 	  Отсутствия надписи ДАРОМ
-		 If PixelGetColor($x0+$x1/2+$xBtnFastRepairInBaseSearch,$y0+$y1/2+$yBtnFastRepairInBaseSearch-20+$yFastRepair)=$WhiteRepair2 Then
-			$NotDelSheepInFastRepair=True
-			$NomSheepInFastRepair=$NomSheepInFastRepair+1
-		 else
-;~ 	  Выбираем корабль
-			$coord = PixelSearch($xSheepInBase[$NomSheepInFastRepair-1]+$xSheepInBaseSmesh,$ySheepInBase[$NomSheepInFastRepair-1]+$ySheepInBaseSmesh,$xSheepInBase[$NomSheepInFastRepair-1]+$xSheepInBaseSmesh,$ySheepInBase[$NomSheepInFastRepair-1]+$ySheepInBaseSmesh, $BlueSheepSelectRepair,8)
-			$KolWhileGo=0
-			While (@error) and ($KolWhileGo<=10)
-			   $KolWhileGo=$KolWhileGo+1
-if $GoProtocol=1 then
-FileWrite($h2File, "BtSheep "&$NomSheepInFastRepair&" ")
-EndIf
-			   MouseClick("left",$xSheepInBase[$NomSheepInFastRepair-1]+random(20),$ySheepInBase[$NomSheepInFastRepair-1]+random(20),1,1)
-			   Sleep($TimeSmallConst+random($TimeSmallRnd))
-			   _DelMessageByFightAnotherFleet ()
-;~ 	  Нажимаем кнопку "Убрать из флота"
-if $GoProtocol=1 then
-FileWrite($h2File, "DelSheep ")
-EndIf
-			   MouseClick("left",$x0+$x1/2+$xBtnDelInFleet+random(20),$y0+$y1/2+$yBtnDelInFleet-10,1,1)
-			   Sleep($TimeSmallConst+random($TimeSmallRnd))
-			   _DelMessageByFightAnotherFleet ()
-			   $SheepInFleetBase[$NomSheepInFastRepair-1]=1
-			   $coord = PixelSearch($xSheepInBase[$NomSheepInFastRepair-1]+$xSheepInBaseSmesh,$ySheepInBase[$NomSheepInFastRepair-1]+$ySheepInBaseSmesh,$xSheepInBase[$NomSheepInFastRepair-1]+$xSheepInBaseSmesh,$ySheepInBase[$NomSheepInFastRepair-1]+$ySheepInBaseSmesh, $BlueSheepSelectRepair,8)
-			WEnd
-			EndIf
-	  Else
-		 $NotDelSheepInFastRepair=True
-	  EndIf
-
-   Else
-	  $SheepInFleetBase[$NomSheepInFastRepair-1]=0
-   EndIf
-   $NomSheepInFastRepair=$NomSheepInFastRepair-1
-if $GoProtocol=1 then
-FileWrite($h2File, $SheepInFleetBase[$NomSheepInFastRepair-1])
-EndIf
-WEnd
-
-$NomFleetInFastRepir=$i
-EndIf
-
-
-
-if $GoProtocol=1 then
-FileWrite($h2File, " FFR "&$NomSheepInFastRepair&" ")
-EndIf
-
-$ExitWhileRepair=0
-While ($NomSheepInFastRepair<=6) and ($ExitWhileRepair=0)
-;~  Проверка Идет ремонт или нет
-$coord = PixelSearch($x0+$x1/2+$xBtnFastRepairInBase,$y0+$y1/2+$yBtnFastRepairInBase-20+$yFastRepair+3,$x0+$x1/2+$xBtnFastRepairInBase,$y0+$y1/2+$yBtnFastRepairInBase-20+$yFastRepair+3, $Black,10)
-If @error Then
-   if $GoProtocol=1 then
-FileWrite($h2File, " NotR ")
-EndIf
-;~  Проверка есть ли возможность активировать ремонт или нет
-   $coord = PixelSearch($x0+$x1/2+$xBtnRepairInBase,$y0+$y1/2+$yBtnRepairInBase-10,$x0+$x1/2+$xBtnRepairInBase,$y0+$y1/2+$yBtnRepairInBase-10, $BlueRepair,10)
-   If not @error Then
-;~ 	  Если ремонт не активирован, то
-;~ 	  Нажимаем ремонт
-if $GoProtocol=1 then
-FileWrite($h2File, "BtRem ")
-EndIf
-	  MouseClick("left",$x0+$x1/2+$xBtnRepairInBase+random(20),$y0+$y1/2+$yBtnRepairInBase-10,1,1)
-	  Sleep($TimeSmallConst+random($TimeSmallRnd))
-	  _DelMessageByFightAnotherFleet ()
-	  $MinMouseClick=@MIN
-	  EndIf
-;~ 	Проверка на возможность быстрого ремонта
-
-   If PixelGetColor($x0+$x1/2+$xBtnFastRepairInBase,$y0+$y1/2+$yBtnFastRepairInBase-20+$yFastRepair)=$WhiteRepair Then
-if $GoProtocol=1 then
-   FileWrite($h2File, "BtFRem ")
-EndIf
-;~ 	  Нажимаем Ремонт "Даром"
-	  MouseClick("left",$x0+$x1/2+$xBtnFastRepairInBase+random(20),$y0+$y1/2+$yBtnFastRepairInBase-20,1,1)
-	  Sleep($TimeSmallConst+random($TimeSmallRnd))
-	  _DelMessageByFightAnotherFleet ()
-	  If $NomSheepInFastRepair=6 Then
-		 $NomFleetInFastRepir=7
-	  EndIf
-   Else
-	  $ExitWhileRepair=1
-	  EndIf
-   Else
-   if $GoProtocol=1 then
+Func _SelectFastRepairFleet ($i,ByRef $NomSheepInFastRepair)
+      if $GoProtocol=1 then
 FileWrite($h2File, " R ")
 EndIf
 
@@ -970,6 +1019,7 @@ EndIf
 if $GoProtocol=1 then
 FileWrite($h2File, " BtSheep "&$NomSheepInFastRepair&" ")
 EndIf
+			   _StopClick()
 			   MouseClick("left",$xSheepInBase[$NomSheepInFastRepair-1]+random(20),$ySheepInBase[$NomSheepInFastRepair-1]+random(20),1,1)
 			   Sleep($TimeSmallConst+random($TimeSmallRnd))
 			   _DelMessageByFightAnotherFleet ()
@@ -982,6 +1032,7 @@ EndIf
 if $GoProtocol=1 then
 FileWrite($h2File, "LastSheep ")
 EndIf
+			   _StopClick()
 			   MouseClick("left",$x0+$x1/2+$xBtnLastSheep+random(20),$y0+$y1/2+$yBtnLastSheep-10,1,1)
 			   Sleep($TimeSmallSmallConst+random($TimeSmallSmallRnd))
 			   _DelMessageByFightAnotherFleet ()
@@ -989,6 +1040,7 @@ EndIf
 if $GoProtocol=1 then
 FileWrite($h2File, "ShSel ")
 EndIf
+			   _StopClick()
 			   MouseClick("left",$x0+$x1/2+$xBtnFirstSheep+random(20),$y0+$y1/2+$yBtnFirstSheep-10+random(20),1,1)
 			   Sleep($TimeSmallSmallConst+random($TimeSmallSmallRnd))
 			   _DelMessageByFightAnotherFleet ()
@@ -996,6 +1048,7 @@ EndIf
 if $GoProtocol=1 then
 FileWrite($h2File, "AddSheep ")
 EndIf
+			   _StopClick()
 			   MouseClick("left",$x0+$x1/2+$xBtnDelInFleet+random(20),$y0+$y1/2+$yBtnDelInFleet-10,1,1)
 			   Sleep($TimeSmallConst+random($TimeSmallRnd))
 			   _DelMessageByFightAnotherFleet ()
@@ -1029,6 +1082,7 @@ EndIf
 if $GoProtocol=1 then
 FileWrite($h2File, "BtRem ")
 EndIf
+				  _StopClick()
 				  MouseClick("left",$x0+$x1/2+$xBtnRepairInBase+random(20),$y0+$y1/2+$yBtnRepairInBase-10,1,1)
 				  Sleep($TimeSmallConst+random($TimeSmallRnd))
 				  _DelMessageByFightAnotherFleet ()
@@ -1040,11 +1094,193 @@ EndIf
 if $GoProtocol=1 then
 FileWrite($h2File, "BtRem ")
 EndIf
+		 _StopClick()
 		 MouseClick("left",$x0+$x1/2+$xBtnRepairInBase+random(20),$y0+$y1/2+$yBtnRepairInBase-10,1,1)
 		 Sleep($TimeSmallConst+random($TimeSmallRnd))
 		 _DelMessageByFightAnotherFleet ()
 		 $MinMouseClick=@MIN
 	 EndIf
+
+EndFunc
+
+Func _FastRepairFleet($i)
+;~    Нажимаем на космос
+if $GoProtocol=1 then
+FileWrite($h2File, "FR"&$i&" ")
+EndIf
+   _StopClick()
+   MouseClick("left",$x0+$x1+$xBtnSpace,$y0+$y1+$yBtnSpace,1,1)
+   Sleep($TimeSmallConst+random($TimeSmallRnd))
+if $GoProtocol=1 then
+FileWrite($h2File, "BtSpace ")
+EndIf
+;~ Если быстрый ремонт еще не запускался.
+if $GoProtocol=1 then
+FileWrite($h2File, " NomFlFR "&$NomFleetInFastRepir&" ")
+EndIf
+
+If $NomSheepInFastRepair>6 Then
+   $NomSheepInFastRepair=0
+   EndIf
+
+;~ Отключаем ремонт
+   if ($SheepRem<>0) and ($NomFleetInFastRepir=0) Then
+;~ 	Проверяем состояние флота
+	  _GetSostSheep($SelectSheep,$SheepRem)
+;~ 	Если флот ремонтируется
+	  IF $StateSheep[$SheepRem-1]=8 then
+;~ 		 Отключаем ремонт
+		 _SelectSheep ($SheepRem)
+if $GoProtocol=1 then
+FileWrite($h2File, "DRep"&$SheepRem&" ")
+EndIf
+		 $coord = PixelSearch($xNumberBtn,$yNumberBtn,$xNumberBtn+5,$yNumberBtn+63, $WhiteBtn,10)
+		 $KolWhileGo=0
+		 While (@error) and ($KolWhileGo<=10)
+			$KolWhileGo=$KolWhileGo+1
+			_SelectSheep($SheepRem)
+ 			Sleep($TimeSmallConst+random($TimeSmallRnd))
+			$coord = PixelSearch($xNumberBtn,$yNumberBtn,$xNumberBtn+5,$yNumberBtn+63, $WhiteBtn,10)
+		 WEnd
+		 _StopClick()
+		 MouseClick("left",$xBtn1+4*$dxBtn-$dxBtn/2+random(20),$yBtn,1,1)
+		 Sleep($TimeMediumConst+random($TimeMediumRnd))
+		 EndIf
+	  EndIf
+;~ Выбираем корабль
+_SelectSheep ($i)
+;~ Заходим в порт (1 кнопка)
+if $GoProtocol=1 then
+FileWrite($h2File, "Bt1 ")
+EndIf
+$coord = PixelSearch($xNumberBtn,$yNumberBtn,$xNumberBtn+5,$yNumberBtn+63, $WhiteBtn,10)
+$KolWhileGo=0
+While (@error) and ($KolWhileGo<=10)
+   $KolWhileGo=$KolWhileGo+1
+   _SelectSheep($i)
+   Sleep($TimeSmallConst+random($TimeSmallRnd))
+   $coord = PixelSearch($xNumberBtn,$yNumberBtn,$xNumberBtn+5,$yNumberBtn+63, $WhiteBtn,10)
+WEnd
+_StopClick()
+MouseClick("left",$xBtn1+1*$dxBtn-$dxBtn/2+random(20),$yBtn,1,1)
+Sleep($TimeSmallConst+random($TimeSmallRnd))
+_DelMessageByFightAnotherFleet ()
+;~ Убираем корабли
+IF $NomFleetInFastRepir=0 then
+$NotDelSheepInFastRepair=False
+$NomSheepInFastRepair=6;
+While ($NomSheepInFastRepair>=2) and (not $NotDelSheepInFastRepair)
+;~ Проверка на наличие корабля
+   $coord = PixelSearch($xSheepInBase[$NomSheepInFastRepair-1]+$xSheepInBaseSmesh,$ySheepInBase[$NomSheepInFastRepair-1]+$ySheepInBaseSmesh,$xSheepInBase[$NomSheepInFastRepair-1]+$xSheepInBaseSmesh,$ySheepInBase[$NomSheepInFastRepair-1]+$ySheepInBaseSmesh, $Black,8)
+   If  @error Then
+if $GoProtocol=1 then
+FileWrite($h2File, " SE ")
+EndIf
+;~    Проверка на наличие кнопки ремонт
+	  $coord = PixelSearch($x0+$x1/2+$xBtnFastRepairInBaseSearch-5,$y0+$y1/2+$yBtnFastRepairInBaseSearch-20-5,$x0+$x1/2+$xBtnFastRepairInBaseSearch+5,$y0+$y1/2+$yBtnFastRepairInBaseSearch-20+5, $YelowRepair,10)
+	  If  not @error Then
+;~ 	  Отсутствия надписи ДАРОМ
+		 If PixelGetColor($x0+$x1/2+$xBtnFastRepairInBaseSearch,$y0+$y1/2+$yBtnFastRepairInBaseSearch-20+$yFastRepair)=$WhiteRepair2 Then
+			$NotDelSheepInFastRepair=True
+			$NomSheepInFastRepair=$NomSheepInFastRepair+1
+		 else
+;~ 	  Выбираем корабль
+			$coord = PixelSearch($xSheepInBase[$NomSheepInFastRepair-1]+$xSheepInBaseSmesh,$ySheepInBase[$NomSheepInFastRepair-1]+$ySheepInBaseSmesh,$xSheepInBase[$NomSheepInFastRepair-1]+$xSheepInBaseSmesh,$ySheepInBase[$NomSheepInFastRepair-1]+$ySheepInBaseSmesh, $BlueSheepSelectRepair,8)
+			$KolWhileGo=0
+			While (@error) and ($KolWhileGo<=10)
+			   $KolWhileGo=$KolWhileGo+1
+if $GoProtocol=1 then
+FileWrite($h2File, "BtSheep "&$NomSheepInFastRepair&" ")
+EndIf
+			   _StopClick()
+			   MouseClick("left",$xSheepInBase[$NomSheepInFastRepair-1]+random(20),$ySheepInBase[$NomSheepInFastRepair-1]+random(20),1,1)
+			   Sleep($TimeSmallConst+random($TimeSmallRnd))
+			   _DelMessageByFightAnotherFleet ()
+;~ 	  Нажимаем кнопку "Убрать из флота"
+if $GoProtocol=1 then
+FileWrite($h2File, "DelSheep ")
+EndIf
+			   _StopClick()
+			   MouseClick("left",$x0+$x1/2+$xBtnDelInFleet+random(20),$y0+$y1/2+$yBtnDelInFleet-10,1,1)
+			   Sleep($TimeSmallConst+random($TimeSmallRnd))
+			   _DelMessageByFightAnotherFleet ()
+			   $SheepInFleetBase[$NomSheepInFastRepair-1]=1
+			   $coord = PixelSearch($xSheepInBase[$NomSheepInFastRepair-1]+$xSheepInBaseSmesh,$ySheepInBase[$NomSheepInFastRepair-1]+$ySheepInBaseSmesh,$xSheepInBase[$NomSheepInFastRepair-1]+$xSheepInBaseSmesh,$ySheepInBase[$NomSheepInFastRepair-1]+$ySheepInBaseSmesh, $BlueSheepSelectRepair,8)
+			WEnd
+			EndIf
+	  Else
+		 $NotDelSheepInFastRepair=True
+	  EndIf
+
+   Else
+	  $SheepInFleetBase[$NomSheepInFastRepair-1]=0
+   EndIf
+   $NomSheepInFastRepair=$NomSheepInFastRepair-1
+if $GoProtocol=1 then
+FileWrite($h2File, $SheepInFleetBase[$NomSheepInFastRepair-1])
+EndIf
+WEnd
+
+$NomFleetInFastRepir=$i
+EndIf
+
+
+
+if $GoProtocol=1 then
+FileWrite($h2File, " FFR "&$NomSheepInFastRepair&" ")
+EndIf
+
+$ExitWhileRepair=0
+While ($NomSheepInFastRepair<=6) and ($ExitWhileRepair=0)
+;~  Проверка Идет ремонт или нет
+   if $GoProtocol=1 then
+FileWrite($h2File, " Wh ")
+EndIf
+;~ MouseMove($x0+$x1/2+$xBtnFastRepairInBase+3-5,$y0+$y1/2+$yBtnFastRepairInBase-20+$yFastRepair+3,1)
+$coord = PixelSearch($x0+$x1/2+$xBtnFastRepairInBase+3-5,$y0+$y1/2+$yBtnFastRepairInBase-20+$yFastRepair+3,$x0+$x1/2+$xBtnFastRepairInBase+5,$y0+$y1/2+$yBtnFastRepairInBase-20+$yFastRepair+3, $Black,10)
+;~ MouseMove($x0+$x1/2+$xBtnFastRepairInBase+3-5,$y0+$y1/2+$yBtnFastRepairInBase-20+$yFastRepair+3+100,1)
+If @error Then
+   if $GoProtocol=1 then
+FileWrite($h2File, " NotR ")
+EndIf
+;~  Проверка есть ли возможность активировать ремонт или нет
+   $coord = PixelSearch($x0+$x1/2+$xBtnRepairInBase,$y0+$y1/2+$yBtnRepairInBase-10,$x0+$x1/2+$xBtnRepairInBase,$y0+$y1/2+$yBtnRepairInBase-10, $BlueRepair,10)
+   If not @error Then
+;~ 	  Если ремонт не активирован, то
+;~ 	  Нажимаем ремонт
+if $GoProtocol=1 then
+FileWrite($h2File, "BtRem ")
+EndIf
+	  _StopClick()
+	  MouseClick("left",$x0+$x1/2+$xBtnRepairInBase+random(20),$y0+$y1/2+$yBtnRepairInBase-10,1,1)
+	  Sleep($TimeSmallConst+random($TimeSmallRnd))
+	  _DelMessageByFightAnotherFleet ()
+	  $MinMouseClick=@MIN
+   Else
+	  $coord = PixelSearch($x0+$x1/2+$xBtnFastRepairInBase-5,$y0+$y1/2+$yBtnFastRepairInBase-20+$yFastRepair+3,$x0+$x1/2+$xBtnFastRepairInBase,$y0+$y1/2+$yBtnFastRepairInBase-20+$yFastRepair+3-15, $YelowRepair2,10)
+	  If @error Then
+		 _SelectFastRepairFleet ($i,$NomSheepInFastRepair)
+		 EndIf
+   EndIf
+;~ 	Проверка на возможность быстрого ремонта
+
+   If PixelGetColor($x0+$x1/2+$xBtnFastRepairInBase,$y0+$y1/2+$yBtnFastRepairInBase-20+$yFastRepair)=$WhiteRepair Then
+if $GoProtocol=1 then
+   FileWrite($h2File, "BtFRem ")
+EndIf
+;~ 	  Нажимаем Ремонт "Даром"
+	  _StopClick()
+	  MouseClick("left",$x0+$x1/2+$xBtnFastRepairInBase+random(20),$y0+$y1/2+$yBtnFastRepairInBase-20,1,1)
+	  Sleep($TimeSmallConst+random($TimeSmallRnd))
+	  _DelMessageByFightAnotherFleet ()
+	  If $NomSheepInFastRepair=6 Then
+		 $NomFleetInFastRepir=7
+	  EndIf
+   Else
+	  $ExitWhileRepair=1
+	  EndIf
+   Else
+	  _SelectFastRepairFleet ($i,$NomSheepInFastRepair)
    EndIf
 
 WEnd
@@ -1056,6 +1292,7 @@ While (not @error) and ($KolWhileGo<=10)
 if $GoProtocol=1 then
    FileWrite($h2File, " BtnEx ")
 EndIf
+   _StopClick()
    MouseClick("left",$x0+$x1/2+$xBtnExit,$y0+$y1/2+$yBtnExit-10,1,1)
    Sleep($TimeSmallConst+random($TimeSmallRnd))
    _DelMessageByFightAnotherFleet ()
@@ -1077,7 +1314,8 @@ Func _SheepGoFlyToConvoy($nom,$i)
   ;~ Нажать кнопку запустить корабль
 if $GoProtocol=1 then
      FileWrite($h2File, "Bt2 ")
-EndIf
+  EndIf
+   _StopClick()
    MouseClick("left",$xBtn1+2*$dxBtn-$dxBtn/2+random(20),$yBtn,1,1)
    $MinMouseClick=@MIN
    Sleep($TimeSmallSmallConst+random($TimeSmallSmallRnd))
@@ -1087,20 +1325,29 @@ EndFunc
 Func _SheepGoConvoy($i)
 ;~    Выбрать корабль
    _SelectSheep($i)
-   $SheepConvoyState[$i-1]=3
+   $coord = PixelSearch($xNumberBtn,$yNumberBtn-13,$xNumberBtn+13,$yNumberBtn+63, $WhiteBtn,10)
+	  If @error Then
+	  _SelectSheep($i)
+	  EndIf
+;~    $SheepConvoyState[$i-1]=3
    $dy=0
    _GoDy ($SelectSheep,$SheepConvoyNomber[$i-1],$dy)
 ;~    Нажать кнопку сопровождать
 if $GoProtocol=1 then
    FileWrite($h2File, "Bt1 ")
 EndIf
+   _StopClick()
    MouseClick("left",$xBtn1+1*$dxBtn-$dxBtn/2+random(20),$yBtn,1,1)
-   Sleep($TimeSmallSmallConst+random($TimeSmallSmallRnd))
+   Sleep($TimeSmallConst+random($TimeSmallRnd))
 ;~    Выбрать корабль сопровождения
 if $GoProtocol=1 then
 FileWrite($h2File, "Conv"&$SheepConvoyNomber[$i-1]&" ")
 EndIf
-   MouseClick("left",$sheeprightIcon-5-random(20),$ysheep1+($SheepConvoyNomber[$i-1]-1)*$dysheep+$dy+$dysheep/2+random(10),1,10)
+   _StopClick()
+   MouseClick("left",$sheeprightIcon-5-random(20),$ysheep1+($SheepConvoyNomber[$i-1]-1)*$dysheep+$dy+$dysheep/2+random(10),1,1)
+   if $GoProtocol=1 then
+	  FileWrite($h2File, "MCl"&$SheepConvoyNomber[$i-1]&" ")
+	  EndIf
    $MinMouseClick=@MIN
    Sleep($TimeSmallSmallConst+random($TimeSmallSmallRnd))
    $coord = PixelSearch($xBtnOk-10,$yBtnOk-10,$xBtnOk+10,$yBtnOk+10, $White,10)
@@ -1110,8 +1357,9 @@ if $GoProtocol=1 then
    FileWrite($h2File, "BtOk ")
 endif
 	  $SheepConvoyState[$i-1]=2
+	  _StopClick()
 	  MouseClick("left",$xBtnOk+random(20),$yBtnOk+random(20),1,1)
-	  Sleep($TimeSmallSmallConst+random($TimeSmallSmallRnd))
+	  Sleep($TimeSmallConst+random($TimeSmallRnd))
 	  EndIf
 EndFunc
 
@@ -1122,6 +1370,7 @@ Func _GoAttackToBase ()
 if $GoProtocol=1 then
  FileWrite($h2File,@CRLF& _NowTime() &"BtBaseAttack ")
  EndIf
+	  _StopClick()
 	  MouseClick("left",$x0+$x1/2-20,$y0+$y1-20,1,1)
 	  Sleep(7000+random(3000))
 	  _DelMessageByFightAnotherFleet ()
@@ -1134,6 +1383,7 @@ if $GoProtocol=1 then
 if $GoProtocol=1 then
 FileWrite($h2File, "BtnClose ")
 EndIf
+		 _StopClick()
 		 MouseClick("left",$x0+$x1/2+$xBtnAttackInBaseY,$y0+$y1/2+$yBtnAttackInBaseY-10,1,1)
 		 Sleep($TimeMediumConst+random($TimeMediumRnd))
 		 _DelMessageByFightAnotherFleet ()
@@ -1150,29 +1400,35 @@ If (@error) and ($BaseAfterAttack=1) Then
 if $GoProtocol=1 then
 FileWrite($h2File, "BtBase ")
 EndIf
+   _StopClick()
    MouseClick("left",$x0+$x1+$xBtnBase,$y0+$y1+$yBtnBase,1,1)
    Sleep($TimeMediumConst+random($TimeMediumRnd))
 ;~    Нажимаем Ремонт
 if $GoProtocol=1 then
 FileWrite($h2File, "BtRepairBase ")
 EndIf
-  MouseClick("left",$x0+$x1/2+$xBaseRepair,$y0+$y1/2+$yBaseRepair,1,1)
+   _StopClick()
+   MouseClick("left",$x0+$x1/2+$xBaseRepair,$y0+$y1/2+$yBaseRepair,1,1)
    Sleep($TimeMediumConst+random($TimeMediumRnd))
 
 ;~    Нажимаем на космос
 if $GoProtocol=1 then
 FileWrite($h2File, "BtSpace "&@CRLF)
 EndIf
+   _StopClick()
    MouseClick("left",$x0+$x1+$xBtnSpace,$y0+$y1+$yBtnSpace,1,1)
    Sleep($TimeMediumConst+random($TimeMediumRnd))
    EndIf
 EndFunc
 
 
-While not (WinActive($NameWindow))
-   Sleep (500)
-   WEnd
+If $TimeStartAssistent<24 then
+   While (@HOUR<>$TimeStartAssistent) or (@MIN<>$TimeStartAssistentMin)
+	  Sleep(20000)
+	  WEnd
+   EndIf
 
+_StopClick()
 ;~ Определение флотов, которым необходимо споровождение.
 $i=1
 While $i<=7
@@ -1190,6 +1446,7 @@ While 1
 	  $FirstStart=0
 	  _GetSostSheep(1,1)
 	  If $StateSheep[0]=0 Then
+		 _StopClick()
 		 MouseClick("left",$sheeprightIcon-5-random(20),$ysheep1+$ParDySheep+$dysheep/2,1,1)
 		 Sleep($TimeSmallSmallConst+random($TimeSmallSmallRnd))
 
@@ -1223,22 +1480,13 @@ While 1
 	  EndIf
 	If ($EnableSheep[$i-1]=1) and (WinActive($NameWindow)) Then
 ;~ 	  Проверка включен космос или нет
-	  $coord = PixelSearch($x0+$x1+$xBtnSpace-5,$y0+$y1+$yBtnSpace-5,$x0+$x1+$xBtnSpace+5,$y0+$y1+$yBtnSpace+5, $YelowSpace,10)
-	  If @error Then
-;~ 		 Если ошибка то возращаем состояние в космос
-		 _DelMessageByFightAnotherFleet ()
-		 $coord = PixelSearch($x0+$x1/2+$xBtnExit-5,$y0+$y1/2+$yBtnExit-10,$x0+$x1/2+$xBtnExit+5,$y0+$y1/2+$yBtnExit-20, $BlueExit,10)
-		 IF not @error Then
-			MouseClick("left",$x0+$x1/2+$xBtnExit,$y0+$y1/2+$yBtnExit-10,1,1)
-			Sleep($TimeSmallConst+random($TimeSmallRnd))
-			EndIf
-	  EndIf
+	  _GoSpace()
 ;~ 	   Определение состояния корабля
 	  _GetSostSheep($SelectSheep,$i)
 ;~ 	  Проверка на Vsec
 ;~ 	  Определение времени ближайшего вылета VSec
 	  $NomVsec=0
-	  While ($NomVsec<=8) and ($VsecTime[$NomVsec]<@HOUR)
+	  While ($NomVsec<=7) and ($VsecTime[$NomVsec]<@HOUR)
 		 $NomVsec=$NomVsec+1
 	  WEnd
 	  $SearchSheepRem=0;
@@ -1273,8 +1521,11 @@ While 1
 			if $SheepConvoyFlag[$i-1]=1 Then
 			   _SheepGoFlyToConvoy(1,$i)
 ;~ 		    Если флот может воевать (задан пользователем)
-			ElseIF ($BattleSheep[$i-1]=1)  Then
+			ElseIF ($BattleSheep[$i-1]=1) and ($VegaSheepOrVegaMet[$i-1]=0)  Then
 			  _GoBattleFleet($i)
+;~ 			Если флот может летать по меткам
+			ElseIF ($VegaSheepOrVegaMet[$i-1]=1)  Then
+			  _GoFlyFleetMet($i)
      	    EndIf
 			if $SheepConvoyNomber[$i-1]<>0 Then
 			   _SheepGoFlyToConvoy(1,$i)
@@ -1288,14 +1539,20 @@ While 1
 			   $SheepConvoyState[$i-1]=3
 			   EndIf
 ;~ 			Проверка необходимости ожидания сопровождения
-			if ($SheepConvoyFlag[$i-1]=1) and ($SheepConvoyState[$i-1]<>3) Then
+			if (($SheepConvoyFlag[$i-1]=1) or ($SheepConvoyNomber[$i-1]<>0)) and ($SheepConvoyState[$i-1]<>3) Then
 			   _SheepGoFlyToConvoy(2,$i)
 ;~ 			Если корабль провел бой и его надо вернуть
 			ElseIf ($SheepGoHomeAfterBattle[$i-1]=1) and ($StateSheepDestroy[$i-1]=1) Then
 			   	_SheepGoHome($i)
-			ElseIf ($BattleSheep[$i-1]=1) and (($StateSheep[$i-1]=2) or (($StateSheep[$i-1]=9) and ($SheepConvoyFlag[$i-1]=1)))  Then
+;~ 			Если корабль остановился в секторе и его надо вернуть
+			ElseIf ($SheepGoHomeInSektor[$i-1]=1) then
+			   _SheepGoHome($i)
+			ElseIf ($BattleSheep[$i-1]=1) and ($VegaSheepOrVegaMet[$i-1]=0) and (($StateSheep[$i-1]=2) or (($StateSheep[$i-1]=9) and ($SheepConvoyFlag[$i-1]=1)))  Then
 ;~ 			   Если флот может воевать (задан пользователем)
 			   _GoBattleFleet($i)
+;~ 			Если флот может летать по меткам
+			ElseIF ($VegaSheepOrVegaMet[$i-1]=1) and (($StateSheep[$i-1]=2) or (($StateSheep[$i-1]=9) and ($SheepConvoyFlag[$i-1]=1)))  Then
+			  _GoFlyFleetMet($i)
 			EndIf
 			if ($SheepConvoyNomber[$i-1]<>0) Then
 			   If $SheepConvoyState[$i-1]=2 Then
@@ -1336,7 +1593,9 @@ While 1
 			$SheepInFight[$i-1]=0
 		 ElseIf $StateSheep[$i-1]=7 Then
 ;~ 			Корабль КРАСНЫЙ на базе
-
+if $GoProtocol=1 then
+FileWrite($h2File, "NR "&$SheepRem&" ")
+EndIf
 			if $SheepRem=$i Then
 ;~ 				Сбросить номер ремонтируемого флота
 			   $SheepRem=0
@@ -1348,15 +1607,17 @@ While 1
 			   ElseIf ($BattleSheep[$i-1]=1) then
 				  _GoBattleFleet($i)
 			   EndIf
-			Else
+			EndIf
 ;~ 			Проверка необходимости ремонта флота
+if $GoProtocol=1 then
+FileWrite($h2File, "NFR "&$NomFleetInFastRepir&" ")
+EndIf
 			IF ($NomFleetInFastRepir=0) or ($NomFleetInFastRepir=$i) Then
 			   If $SheepGoFastRepair[$i-1]=0 Then
 				  _RepairFleet()
 			   Else
 				  _FastRepairFleet($i)
 			   EndIf
-			EndIf
 			EndIf
 			if $SheepEndAssistants[$i-1]=1 Then
 			   _stop()
@@ -1410,15 +1671,17 @@ If ($BaseAfterAttack<>1) and (($MinMouseClick<>@MIN) and Mod(Abs($MinMouseClick-
 if $GoProtocol=1 then
    FileWrite($h2File,  _NowTime()&" BtSpace "&@CRLF)
 EndIf
+   _StopClick()
    MouseClick("left",$x0+$x1+$xBtnSpace,$y0+$y1+$yBtnSpace,1,1)
    $MinMouseClick=@MIN
    EndIf
 Sleep($TimeSheepCircleConst+random($TimeSheepCircleRnd))
 ;~ Если в середине появилась надпись
-   $coord = PixelSearch($xBtnOk-10,$yBtnOk-10,$xBtnOk+10,$yBtnOk+10, $White,10)
+   $coord = PixelSearch($xBtnOk-8,$yBtnOk+11,$xBtnOk-8,$yBtnOk+13, $White,10)
    If not @error Then
 ;~ 	   Нажать «ОК»
 	  $FirstStart=1
+	  _StopClick()
 	  MouseClick("left",$xBtnOk+random(20),$yBtnOk+random(20),1,1)
 	  Sleep(30000)
    EndIf
@@ -1511,3 +1774,74 @@ Func _stop()
    MsgBox($MB_SYSTEMMODAL, "Выход", "Фарм-Ассистент отключен."&@CRLF&"Информация о статистике сохранена в SessionStatistics.txt", 100)
     Exit
  EndFunc
+
+ HotKeySet("r","_RunSaveActionInFile")
+
+ Func _RunSaveActionInFile()
+	$dll = DllOpen("user32.dll")
+	$BeginTime = TimerInit()
+	While _IsPressed("43", $dll)
+	   If _IsPressed("31", $dll) Then
+		  $DifTime = TimerDiff($BeginTime)
+		  $BeginTime = TimerInit()
+		  FileWrite($FileAction,'S '&$DifTime&@CRLF)
+		  FileWrite($FileAction,'1'&@CRLF)
+	   EndIf
+	   If _IsPressed("32", $dll) Then
+		  $DifTime = TimerDiff($BeginTime)
+		  $BeginTime = TimerInit()
+		  FileWrite($FileAction,'S '&$DifTime&@CRLF)
+		  FileWrite($FileAction,'2'&@CRLF)
+	   EndIf
+	   If _IsPressed("33", $dll) Then
+		  $DifTime = TimerDiff($BeginTime)
+		  $BeginTime = TimerInit()
+		  FileWrite($FileAction,'S '&$DifTime&@CRLF)
+		  FileWrite($FileAction,'3'&@CRLF)
+	   EndIf
+	   If _IsPressed("34", $dll) Then
+		  $DifTime = TimerDiff($BeginTime)
+		  $BeginTime = TimerInit()
+		  FileWrite($FileAction,'S '&$DifTime&@CRLF)
+		  FileWrite($FileAction,'4'&@CRLF)
+	   EndIf
+	   If _IsPressed("35", $dll) Then
+		  $DifTime = TimerDiff($BeginTime)
+		  $BeginTime = TimerInit()
+		  FileWrite($FileAction,'S '&$DifTime&@CRLF)
+		  FileWrite($FileAction,'5'&@CRLF)
+	   EndIf
+	   If _IsPressed("36", $dll) Then
+		  $DifTime = TimerDiff($BeginTime)
+		  $BeginTime = TimerInit()
+		  FileWrite($FileAction,'S '&$DifTime&@CRLF)
+		  FileWrite($FileAction,'6'&@CRLF)
+	   EndIf
+	   if _IsPressed("10", $dll) Then
+		  While _IsPressed("10", $dll)
+			 Sleep(100)
+		    WEnd
+		  EndIf
+	   If _IsPressed("53", $dll) Then
+		  $DifTime = TimerDiff($BeginTime)
+		  $BeginTime = TimerInit()
+		  FileWrite($FileAction,'S '&$DifTime&@CRLF)
+		  FileWrite($FileAction,'Stop'&@CRLF)
+	   EndIf
+	   If _IsPressed("01", $dll) Then ;Ожидание, в цикле, нажатия ЛКМ
+		  $aCoord=MouseGetPos()
+		  $DifTime = TimerDiff($BeginTime)
+		  $BeginTime = TimerInit()
+		  FileWrite($FileAction,'S '&$DifTime&@CRLF)
+		  FileWrite($FileAction,'ML'&$aCoord[0]&':'&$aCoord[1]&@CRLF)
+	   EndIf
+	   If _IsPressed("02", $dll) Then ;Ожидание, в цикле, нажатия ЛКМ
+		  $aCoord=MouseGetPos()
+		  $DifTime = TimerDiff($BeginTime)
+		  $BeginTime = TimerInit()
+		  FileWrite($FileAction,'S '&$DifTime&@CRLF)
+		  FileWrite($FileAction,'MR'&$aCoord[0]&':'&$aCoord[1]&@CRLF)
+		  EndIf
+	   WEnd
+	DllClose($dll)
+	EndFunc

@@ -1,0 +1,103 @@
+Дата старта сеанса - 13.12.2016 Время старта сеанса - 21:28:46
+$aPos[0]=-8 $aPos[1]=-8 $aPos[2]=1936 $aPos[3]=1056
+$aClientSize[0]=1920 $aClientSize[1]=1018
+$Blue=5219778 $SkyBlue=5153985 $BlueRepair=2112577 $Red=13987438 $Yelow=14784091 $Red=13987438
+$NameWindow=VEGA Conflict
+X0=1 Y0=21
+X1=1920 Y1=1018
+$xBtnOk=961 $yBtnOk=610
+$xBtnBase=1766 $yBtnBase=964
+$xBtnSpace=1885 $xBtnSpace=1003
+$sheepleft=1696$sheeprightIcon=1726$SheepLeftClick=1711
+$ysheep1=310
+$ysheep2=353
+$ysheep3=396
+$ysheep4=439
+$ysheep5=482
+$ysheep6=525
+$ysheep7=568
+Позиция осановка или движение в космосе=1707y=369
+Позиция 2 движеня в космосе=1704y=369
+Позиция на базе=1712y=369
+Позиция ремонт=1712y=374
+Надпись в середине x1=951y1=600x2=971y2=620
+$xSheepInBase1=826 $ySheepInBase1=385
+$xSheepInBase2=961 $ySheepInBase2=385
+$xSheepInBase3=1096 $ySheepInBase3=385
+$xSheepInBase4=826 $ySheepInBase4=520
+$xSheepInBase5=961 $ySheepInBase5=520
+$xSheepInBase6=1096 $ySheepInBase6=520
+$xBtnLastSheep=526 $yBtnLastSheep=255
+$xBtnFirstSheep=526 $yBtnFirstSheep=325
+$xBtnDelInFleet=1261 $yBtnDelInFleet=895
+$xBtnRepairInBase=1291 $yBtnRepairInBase=426
+$xBtnFastRepairInBase=1313 $yBtnFastRepairInBase=699
+$xBtnFastRepairInBaseSearch=1313 $yBtnFastRepairInBaseSearch=473
+$xBtnExit=1437 $yBtnExit=186
+$xNumberBtn=1136 $yNumberBtn=888
+$xNumberBtn+=1149 $yNumberBtn+=951
+$x1/2=960 $y0+($y1)/2+80=610 $x1/2+90=1050 $y0+($y1)/2+120+$ySmeshMozilaVstupit=650
+$EnableSheep=1111111
+$SheepGoHomeFromVsec=0000000
+$BattleSheep=0000011
+$VegaSheepNomInSearch[0]=0000034
+$VegaSheepNomInSearch[1]=0000000
+$SheepGoHomeAfterBattle=0000000
+$SheepGoRepair=0000000
+$SheepGoFastRepair=0000000
+$RepairNom=1234567
+$SheepEndAssistants=0000000
+$SheepConvoyNomber=0000000
+$SheepConvoyFlag=0000000
+21:28:49Sheep=1 State=0
+Sl1 21:28:51Sheep=1 State=8
+21:28:51Sheep=2 State=1
+21:28:51Sheep=3 State=1
+21:28:52Sheep=4 State=1
+21:28:52Sheep=5 State=1
+21:28:53Sheep=6 State=1
+21:28:53Sheep=7 State=1
+21:28:53Sheep=7 State=1
+Atk7 Sl7 Otm VOtmFl4 AtkF Vst 
+21:29:03Sheep=6 State=1
+Atk6 Sl6 Otm VOtmFl3 AtkF 
+21:29:11Sheep=5 State=1
+
+21:29:12Sheep=4 State=1
+
+21:29:13Sheep=3 State=1
+
+21:29:13Sheep=2 State=1
+
+21:29:14Sheep=1 State=8
+
+21:29:16Sheep=7 State=1
+Atk7 Sl7 Otm VOtmFl4 BtnOk 
+21:29:26Sheep=6 State=3
+
+21:29:27Sheep=5 State=1
+
+21:29:28Sheep=4 State=1
+
+21:29:29Sheep=3 State=1
+
+21:29:30Sheep=2 State=1
+
+21:29:31Sheep=1 State=8
+
+21:29:33Sheep=7 State=1
+Atk7 Sl7 Otm VOtmFl4 BtnOk 
+21:29:43Sheep=6 State=3
+
+21:29:44Sheep=5 State=1
+
+21:29:45Sheep=4 State=1
+
+21:29:46Sheep=3 State=1
+
+21:29:47Sheep=2 State=1
+
+21:29:48Sheep=1 State=8
+
+21:29:50Sheep=7 State=1
+Atk7 Sl7 Otm VOtmFl4 BtnOk 
